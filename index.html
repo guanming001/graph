@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Draw Graph</title>
+
+    <style>
+        label {
+            display: inline-block;
+            width: 150px;
+            margin-top: 2px;
+        }
+
+        input,
+        select {
+            margin-bottom: 2px;
+        }
+
+        .function-row {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 10px;
+        }
+
+        .function-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11/lib/browser/math.js"></script>
+
+</head>
+
+<body>
+
+    <div class="function-row">
+
+        <div class="function-box">
+            <strong>Function 1</strong><br>
+
+            <label>Function:</label>
+            <input type="text" id="myfunction" value="x^2"><br>
+
+            <label>Plot function:</label>
+            <select id="plotfunction">
+                <option value="1" selected>Yes</option>
+                <option value="0">No</option>
+            </select><br>
+
+            <label>Plot X min:</label>
+            <input type="number" id="plotxmin" value="-3"><br>
+
+            <label>Plot X max:</label>
+            <input type="number" id="plotxmax" value="3"><br>
+
+            <label>Plot Y min:</label>
+            <input type="number" id="plotymin" placeholder="auto"><br>
+
+            <label>Plot Y max:</label>
+            <input type="number" id="plotymax" placeholder="auto"><br>
+
+        </div>
+
+        <div class="function-box">
+            <strong>Function 2</strong><br>
+
+            <label>Function:</label>
+            <input type="text" id="myfunction2" value="x"><br>
+
+            <label>Plot function:</label>
+            <select id="plotfunction2">
+                <option value="1" selected>Yes</option>
+                <option value="0">No</option>
+            </select><br>
+
+            <label>Plot X min:</label>
+            <input type="number" id="plotxmin2" value="-3"><br>
+
+            <label>Plot X max:</label>
+            <input type="number" id="plotxmax2" value="3"><br>
+
+            <label>Plot Y min:</label>
+            <input type="number" id="plotymin2" placeholder="auto"><br>
+
+            <label>Plot Y max:</label>
+            <input type="number" id="plotymax2" placeholder="auto"><br>
+
+        </div>
+
+    </div>
+
+    <div>
+
+        <label>X min:</label>
+        <input type="number" id="xmin" value="-3"><br>
+
+        <label>X max:</label>
+        <input type="number" id="xmax" value="3"><br>
+
+        <label>Y min:</label>
+        <input type="number" id="ymin" value="-10"><br>
+
+        <label>Y max:</label>
+        <input type="number" id="ymax" value="10"><br>
+
+        <label>X spacing every 2 cm:</label>
+        <input type="number" id="xlabelspacing" value="1"> unit<br>
+
+        <label>Y spacing every 2 cm:</label>
+        <input type="number" id="ylabelspacing" value="2"> unit<br>
+
+        <label>Points to mark:</label>
+        <input type="text" id="plotpoints" placeholder="e.g. (1,2) (2,3) (-1,4)">
+        <br>
+
+        <button id="drawGraph">Draw Graph</button>
+        <button id="downloadSVG">Download SVG</button>
+        <button id="downloadPNG">Download PNG</button>
+
+    </div>
+
+    <div id="svgContainer" style="margin-top:20px;"></div>
+
+    <script>
+
+        const cmToPx = 37.795275591;
+        const svgns = "http://www.w3.org/2000/svg";
+        const paddingPx = 25;
+
+        const val = id => {
+            const el = document.getElementById(id);
+            if (!el.value) return null;
+            return parseFloat(el.value);
+        };
+
+        function createSVG(tag, attrs = {}) {
+            const el = document.createElementNS(svgns, tag);
+            for (const k in attrs) el.setAttribute(k, attrs[k]);
+            return el;
+        }
+
+        function drawLine(svg, x1, y1, x2, y2, width, color = "black", marker = null, dash = null) {
+
+            const line = createSVG("line", {
+                x1, y1, x2, y2,
+                stroke: color,
+                "stroke-width": width
+            });
+
+            if (marker) line.setAttribute("marker-end", marker);
+            if (dash) line.setAttribute("stroke-dasharray", dash);
+
+            svg.appendChild(line);
+        }
+
+        function drawCross(svg, x, y, size = 4, color = "black") {
+
+            drawLine(svg, x - size, y - size, x + size, y + size, 1.5, color);
+            drawLine(svg, x - size, y + size, x + size, y - size, 1.5, color);
+
+        }
+
+        function parsePoints(str) {
+
+            const regex = /\(\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*\)/g;
+
+            const points = [];
+            let match;
+
+            while ((match = regex.exec(str)) !== null) {
+
+                points.push({
+                    x: parseFloat(match[1]),
+                    y: parseFloat(match[2])
+                });
+
+            }
+
+            return points;
+        }
+
+        function toSvgCoords(x, y, xmin, xmax, ymin, ymax, widthPx, heightPx) {
+
+            const scaleX = widthPx / (xmax - xmin);
+            const scaleY = heightPx / (ymax - ymin);
+
+            const sx = (x - xmin) * scaleX + paddingPx;
+            const sy = heightPx - (y - ymin) * scaleY + paddingPx;
+
+            return [sx, sy];
+        }
+
+        function drawGrid(svg, widthPx, heightPx, stepCm, lineWidth, color, dash = null) {
+
+            const numStepsX = widthPx / (stepCm * cmToPx);
+            const numStepsY = heightPx / (stepCm * cmToPx);
+
+            for (let i = 0; i <= numStepsX; i++) {
+                const pos = i * stepCm * cmToPx + paddingPx;
+                drawLine(svg, pos, paddingPx, pos, heightPx + paddingPx, lineWidth, color, null, dash);
+            }
+
+            for (let i = 0; i <= numStepsY; i++) {
+                const pos = i * stepCm * cmToPx + paddingPx;
+                drawLine(svg, paddingPx, pos, widthPx + paddingPx, pos, lineWidth, color, null, dash);
+            }
+        }
+
+        function drawLabel(svg, text, x, y, anchor = "middle") {
+
+            const label = createSVG("text", {
+                x,
+                y,
+                "font-size": 14,
+                "font-family": "Times New Roman",
+                "text-anchor": anchor,
+                fill: "black"
+            });
+
+            label.textContent = text;
+            svg.appendChild(label);
+
+            const bbox = label.getBBox();
+
+            const rect = createSVG("rect", {
+                x: bbox.x - 2,
+                y: bbox.y - 2,
+                width: bbox.width + 4,
+                height: bbox.height + 4,
+                fill: "white"
+            });
+
+            svg.insertBefore(rect, label);
+        }
+
+        function createArrowMarker(svg) {
+
+            const defs = createSVG("defs");
+
+            const marker = createSVG("marker", {
+                id: "arrow",
+                markerWidth: 13,
+                markerHeight: 15,
+                refX: 13,
+                refY: 7.5,
+                orient: "auto",
+                markerUnits: "strokeWidth"
+            });
+
+            const path = createSVG("path", {
+                d: "M0,2 L0,13 L13,7.5 Z",
+                fill: "black"
+            });
+
+            marker.appendChild(path);
+            defs.appendChild(marker);
+            svg.appendChild(defs);
+        }
+
+        function plotFunction(svg, funcStr, plotFlag, xmin, xmax, ymin, ymax, plotXmin, plotXmax, plotYmin, plotYmax, widthPx, heightPx, color) {
+            if (plotFlag !== 1) return;
+
+            let func;
+            try {
+                func = new Function("x", "return " + funcStr);
+            } catch {
+                alert("Invalid function");
+                return;
+            }
+
+            const expr = math.compile(funcStr);
+
+            const nSteps = 1000; // increase sampling resolution
+            let prev = null;
+            let prevY = null;
+
+            for (let i = 0; i <= nSteps; i++) {
+                const x = plotXmin + (i / nSteps) * (plotXmax - plotXmin);
+                let y;
+                try {
+                    y = expr.evaluate({ x: x });
+                } catch {
+                    prev = null;
+                    prevY = null;
+                    continue;
+                }
+
+                // Skip infinities or NaN
+                if (!isFinite(y)) {
+                    prev = null;
+                    prevY = null;
+                    continue;
+                }
+
+                // Apply plotYmin / plotYmax if provided
+                if ((plotYmin !== null && y < plotYmin) || (plotYmax !== null && y > plotYmax)) {
+                    prev = null;
+                    prevY = null;
+                    continue;
+                }
+
+                const [sx, sy] = toSvgCoords(x, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
+
+                // Draw line only if jump is not too large
+                if (prev && prevY !== null) {
+                    const deltaY = Math.abs(sy - prev[1]);
+                    const jumpThreshold = heightPx * 0.25; // relative threshold
+                    if (deltaY < jumpThreshold) {
+                        drawLine(svg, prev[0], prev[1], sx, sy, 1.5, color);
+                    } else {
+                        prev = null; // reset at discontinuity
+                    }
+                }
+
+                prev = [sx, sy];
+                prevY = y;
+            }
+        }
+
+        function drawGraph() {
+
+            const xmin = val("xmin");
+            const xmax = val("xmax");
+            const ymin = val("ymin");
+            const ymax = val("ymax");
+
+            const xlabelspacing = val("xlabelspacing");
+            const ylabelspacing = val("ylabelspacing");
+
+            const widthCm = (xmax - xmin) * 2 / xlabelspacing;
+            const heightCm = (ymax - ymin) * 2 / ylabelspacing;
+
+            const widthPx = widthCm * cmToPx;
+            const heightPx = heightCm * cmToPx;
+
+            const svgWidth = widthPx + 2 * paddingPx;
+            const svgHeight = heightPx + 2 * paddingPx;
+
+            const container = document.getElementById("svgContainer");
+            container.innerHTML = "";
+
+            const svg = createSVG("svg", {
+                width: svgWidth,
+                height: svgHeight,
+                viewBox: `0 0 ${svgWidth} ${svgHeight}`,
+                xmlns: svgns,
+                version: "1.1"
+            });
+
+            container.appendChild(svg);
+
+            drawGrid(svg, widthPx, heightPx, 0.2, 0.4, "grey", "1,1");
+            drawGrid(svg, widthPx, heightPx, 1.0, 0.8, "grey", "1,1");
+            drawGrid(svg, widthPx, heightPx, 2.0, 0.9, "grey");
+
+            createArrowMarker(svg);
+
+            const [x0, y0] = toSvgCoords(0, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
+
+            const arrowOffset = 25;
+
+            drawLine(svg, paddingPx, y0, widthPx + paddingPx + arrowOffset, y0, 1, "black", "url(#arrow)");
+            drawLine(svg, x0, heightPx + paddingPx, x0, paddingPx - arrowOffset, 1, "black", "url(#arrow)");
+
+            for (let x = xmin; x <= xmax; x += xlabelspacing) {
+                if (x === 0) continue;
+                const [sx] = toSvgCoords(x, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
+                drawLabel(svg, x, sx, y0 + 16);
+            }
+
+            if (xmin <= 0 && xmax >= 0) {
+                const [sx] = toSvgCoords(0, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
+                drawLabel(svg, 0, sx - 8, y0 + 16, "end");
+            }
+
+            for (let y = ymin; y <= ymax; y += ylabelspacing) {
+                if (y === 0) continue;
+                const [, sy] = toSvgCoords(0, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
+                drawLabel(svg, y, x0 - 6, sy + 4, "end");
+            }
+
+            const xlabel = createSVG("text", { x: widthPx + paddingPx + 15, y: y0 + 15, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
+            xlabel.textContent = "x";
+            svg.appendChild(xlabel);
+
+            const ylabel = createSVG("text", { x: x0 - 15, y: 10, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
+            ylabel.textContent = "y";
+            svg.appendChild(ylabel);
+
+            plotFunction(
+                svg,
+                document.getElementById("myfunction").value,
+                parseInt(document.getElementById("plotfunction").value),
+                xmin, xmax, ymin, ymax,
+                val("plotxmin"), val("plotxmax"),
+                val("plotymin") !== null ? val("plotymin") : ymin,
+                val("plotymax") !== null ? val("plotymax") : ymax,
+                widthPx, heightPx,
+                "red"
+            );
+
+            plotFunction(
+                svg,
+                document.getElementById("myfunction2").value,
+                parseInt(document.getElementById("plotfunction2").value),
+                xmin, xmax, ymin, ymax,
+                val("plotxmin2"), val("plotxmax2"),
+                val("plotymin2") !== null ? val("plotymin2") : ymin,
+                val("plotymax2") !== null ? val("plotymax2") : ymax,
+                widthPx, heightPx,
+                "blue"
+            );
+
+            const pointsInput = document.getElementById("plotpoints").value;
+            const points = parsePoints(pointsInput);
+            points.forEach(p => {
+                const [sx, sy] = toSvgCoords(
+                    p.x, p.y,
+                    xmin, xmax, ymin, ymax,
+                    widthPx, heightPx
+                );
+                drawCross(svg, sx, sy);
+            });
+        }
+
+        function downloadSVG() {
+
+            const svg = document.querySelector("#svgContainer svg");
+            if (!svg) return;
+
+            const blob = new Blob([svg.outerHTML], { type: "image/svg+xml" });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "graph.svg";
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadPNG() {
+
+            const svg = document.querySelector("#svgContainer svg");
+            if (!svg) return;
+
+            const svgData = new XMLSerializer().serializeToString(svg);
+
+            const width = svg.width.baseVal.value;
+            const height = svg.height.baseVal.value;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+
+            const img = new Image();
+
+            img.onload = function () {
+
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(function (blob) {
+
+                    const url = URL.createObjectURL(blob);
+
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = "graph.png";
+
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                }, "image/png");
+            };
+
+            img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+        }
+
+        document.getElementById("drawGraph").addEventListener("click", drawGraph);
+        document.getElementById("downloadSVG").addEventListener("click", downloadSVG);
+        document.getElementById("downloadPNG").addEventListener("click", downloadPNG);
+
+    </script>
+
+</body>
+
+</html>
