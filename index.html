@@ -8,7 +8,7 @@
     <style>
         label {
             display: inline-block;
-            width: 150px;
+            width: 145px;
             margin-top: 2px;
         }
 
@@ -91,7 +91,8 @@
 
     </div>
 
-    <div>
+    <div class="function-box">
+        <strong>Graph Settings</strong><br>
 
         <label>X min:</label>
         <input type="number" id="xmin" value="-3"><br>
@@ -111,10 +112,18 @@
         <label>Y spacing every 2 cm:</label>
         <input type="number" id="ylabelspacing" value="2"> unit<br>
 
-        <label>Points to mark:</label>
-        <input type="text" id="plotpoints" placeholder="e.g. (1,2) (2,3) (-1,4)">
-        <br>
+        <label>Coordinates to plot:</label>
+        <input type="text" id="plotpoints" placeholder="e.g. (1,1) (2,4) (-1,1)"><br>
 
+        <label>X values to plot:</label>
+        <input type="text" id="xvaluesplot" placeholder="e.g. 1 2 -1"><br>
+
+        <label>Y values to plot:</label>
+        <input type="text" id="yvaluesplot" placeholder="e.g. 1 4 1">
+
+    </div>
+
+    <div style="margin-top:10px;">
         <button id="drawGraph">Draw Graph</button>
         <button id="downloadSVG">Download SVG</button>
         <button id="downloadPNG">Download PNG</button>
@@ -141,12 +150,13 @@
             return el;
         }
 
-        function drawLine(svg, x1, y1, x2, y2, width, color = "black", marker = null, dash = null) {
+        function drawLine(svg, x1, y1, x2, y2, width, color = "black", marker = null, dash = null, opacity = 1) {
 
             const line = createSVG("line", {
                 x1, y1, x2, y2,
                 stroke: color,
-                "stroke-width": width
+                "stroke-width": width,
+                "stroke-opacity": opacity
             });
 
             if (marker) line.setAttribute("marker-end", marker);
@@ -157,8 +167,8 @@
 
         function drawCross(svg, x, y, size = 4, color = "black") {
 
-            drawLine(svg, x - size, y - size, x + size, y + size, 1.5, color);
-            drawLine(svg, x - size, y + size, x + size, y - size, 1.5, color);
+            drawLine(svg, x - size, y - size, x + size, y + size, 1.5, color, null, null, 0.7);
+            drawLine(svg, x - size, y + size, x + size, y - size, 1.5, color, null, null, 0.7);
 
         }
 
@@ -179,6 +189,30 @@
             }
 
             return points;
+        }
+
+        function parseValueList(str) {
+            if (!str) return [];
+            return str.trim().split(/[\s,]+/).map(Number).filter(v => !isNaN(v));
+        }
+
+        function valuesToPoints(xList, yList) {
+            const len = Math.min(xList.length, yList.length);
+            const points = [];
+            for (let i = 0; i < len; i++) {
+                points.push({ x: xList[i], y: yList[i] });
+            }
+            return points;
+        }
+
+        function pointsToCoordinateString(points) {
+            return points.map(p => `(${p.x},${p.y})`).join(" ");
+        }
+
+        function pointsToValueLists(points) {
+            const xList = points.map(p => p.x).join(" ");
+            const yList = points.map(p => p.y).join(" ");
+            return { xList, yList };
         }
 
         function toSvgCoords(x, y, xmin, xmax, ymin, ymax, widthPx, heightPx) {
@@ -351,8 +385,8 @@
 
             container.appendChild(svg);
 
-            drawGrid(svg, widthPx, heightPx, 0.2, 0.4, "grey", "1,1");
-            drawGrid(svg, widthPx, heightPx, 1.0, 0.8, "grey", "1,1");
+            drawGrid(svg, widthPx, heightPx, 0.2, 0.5, "grey");
+            drawGrid(svg, widthPx, heightPx, 1.0, 0.7, "grey");
             drawGrid(svg, widthPx, heightPx, 2.0, 0.9, "grey");
 
             createArrowMarker(svg);
@@ -413,8 +447,41 @@
                 "blue"
             );
 
-            const pointsInput = document.getElementById("plotpoints").value;
-            const points = parsePoints(pointsInput);
+            document.getElementById("plotpoints").addEventListener("input", () => {
+                const points = parsePoints(document.getElementById("plotpoints").value);
+                const { xList, yList } = pointsToValueLists(points);
+
+                document.getElementById("xvaluesplot").value = xList;
+                document.getElementById("yvaluesplot").value = yList;
+            });
+
+            function syncFromXY() {
+                const xList = parseValueList(document.getElementById("xvaluesplot").value);
+                const yList = parseValueList(document.getElementById("yvaluesplot").value);
+
+                const points = valuesToPoints(xList, yList);
+                document.getElementById("plotpoints").value = pointsToCoordinateString(points);
+            }
+
+            document.getElementById("xvaluesplot").addEventListener("input", syncFromXY);
+            document.getElementById("yvaluesplot").addEventListener("input", syncFromXY);
+
+            // const pointsInput = document.getElementById("plotpoints").value;
+            // const points = parsePoints(pointsInput);
+            let points = [];
+
+            // Priority: coordinates → else x/y lists
+            const coordStr = document.getElementById("plotpoints").value.trim();
+            const xStr = document.getElementById("xvaluesplot").value.trim();
+            const yStr = document.getElementById("yvaluesplot").value.trim();
+
+            if (coordStr) {
+                points = parsePoints(coordStr);
+            } else if (xStr && yStr) {
+                const xList = parseValueList(xStr);
+                const yList = parseValueList(yStr);
+                points = valuesToPoints(xList, yList);
+            }
             points.forEach(p => {
                 const [sx, sy] = toSvgCoords(
                     p.x, p.y,
@@ -423,6 +490,9 @@
                 );
                 drawCross(svg, sx, sy);
             });
+            if (xList.length !== yList.length) {
+                alert("Number of x values and y values must match.");
+            }
         }
 
         function downloadSVG() {
