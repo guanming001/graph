@@ -119,7 +119,13 @@
         <input type="text" id="xvaluesplot" placeholder="e.g. 1 2 -1"><br>
 
         <label>Y values to plot:</label>
-        <input type="text" id="yvaluesplot" placeholder="e.g. 1 4 1">
+        <input type="text" id="yvaluesplot" placeholder="e.g. 1 4 1"><br>
+
+        <label>Plot grid and axes:</label>
+        <select id="plotgridaxes">
+            <option value="1" selected>Yes</option>
+            <option value="0">No</option>
+        </select><br>
 
     </div>
 
@@ -385,43 +391,46 @@
 
             container.appendChild(svg);
 
-            drawGrid(svg, widthPx, heightPx, 0.2, 0.5, "grey");
-            drawGrid(svg, widthPx, heightPx, 1.0, 0.7, "grey");
-            drawGrid(svg, widthPx, heightPx, 2.0, 0.9, "grey");
+            const plotGridAxesFlag = document.getElementById("plotgridaxes").value === "1";
+            if (plotGridAxesFlag) {
+                drawGrid(svg, widthPx, heightPx, 0.2, 0.5, "grey");
+                drawGrid(svg, widthPx, heightPx, 1.0, 0.7, "grey");
+                drawGrid(svg, widthPx, heightPx, 2.0, 0.9, "grey");
 
-            createArrowMarker(svg);
+                createArrowMarker(svg);
 
-            const [x0, y0] = toSvgCoords(0, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
+                const [x0, y0] = toSvgCoords(0, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
 
-            const arrowOffset = 25;
+                const arrowOffset = 25;
 
-            drawLine(svg, paddingPx, y0, widthPx + paddingPx + arrowOffset, y0, 1, "black", "url(#arrow)");
-            drawLine(svg, x0, heightPx + paddingPx, x0, paddingPx - arrowOffset, 1, "black", "url(#arrow)");
+                drawLine(svg, paddingPx, y0, widthPx + paddingPx + arrowOffset, y0, 1, "black", "url(#arrow)");
+                drawLine(svg, x0, heightPx + paddingPx, x0, paddingPx - arrowOffset, 1, "black", "url(#arrow)");
 
-            for (let x = xmin; x <= xmax; x += xlabelspacing) {
-                if (x === 0) continue;
-                const [sx] = toSvgCoords(x, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                drawLabel(svg, x, sx, y0 + 16);
+                for (let x = xmin; x <= xmax; x += xlabelspacing) {
+                    if (x === 0) continue;
+                    const [sx] = toSvgCoords(x, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
+                    drawLabel(svg, x, sx, y0 + 16);
+                }
+
+                if (xmin <= 0 && xmax >= 0) {
+                    const [sx] = toSvgCoords(0, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
+                    drawLabel(svg, 0, sx - 8, y0 + 16, "end");
+                }
+
+                for (let y = ymin; y <= ymax; y += ylabelspacing) {
+                    if (y === 0) continue;
+                    const [, sy] = toSvgCoords(0, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
+                    drawLabel(svg, y, x0 - 6, sy + 4, "end");
+                }
+
+                const xlabel = createSVG("text", { x: widthPx + paddingPx + 15, y: y0 + 15, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
+                xlabel.textContent = "x";
+                svg.appendChild(xlabel);
+
+                const ylabel = createSVG("text", { x: x0 - 15, y: 10, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
+                ylabel.textContent = "y";
+                svg.appendChild(ylabel);
             }
-
-            if (xmin <= 0 && xmax >= 0) {
-                const [sx] = toSvgCoords(0, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                drawLabel(svg, 0, sx - 8, y0 + 16, "end");
-            }
-
-            for (let y = ymin; y <= ymax; y += ylabelspacing) {
-                if (y === 0) continue;
-                const [, sy] = toSvgCoords(0, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                drawLabel(svg, y, x0 - 6, sy + 4, "end");
-            }
-
-            const xlabel = createSVG("text", { x: widthPx + paddingPx + 15, y: y0 + 15, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
-            xlabel.textContent = "x";
-            svg.appendChild(xlabel);
-
-            const ylabel = createSVG("text", { x: x0 - 15, y: 10, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
-            ylabel.textContent = "y";
-            svg.appendChild(ylabel);
 
             plotFunction(
                 svg,
