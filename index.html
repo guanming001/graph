@@ -173,6 +173,12 @@
                 </tr>
             </table>
 
+            <label>X-axis label every:</label>
+            <input type="number" id="advancedXLabelSpacing" value="1" min="0.1" step="0.1"> cm<br>
+
+            <label>Y-axis label every:</label>
+            <input type="number" id="advancedYLabelSpacing" value="2" min="0.1" step="0.1"> cm<br>
+
             <label>Plot grid and axes:</label>
             <select id="plotgridaxes">
                 <option value="1" selected>Yes</option>
@@ -490,7 +496,15 @@
                 drawLine(svg, paddingPx, y0, widthPx + paddingPx + arrowOffset, y0, 1, "black", "url(#arrow)");
                 drawLine(svg, x0, heightPx + paddingPx, x0, paddingPx - arrowOffset, 1, "black", "url(#arrow)");
 
-                for (let x = xmin; x <= xmax; x += xlabelspacing) {
+                let xlabelspacingAdv = xlabelspacing; // default
+                let ylabelspacingAdv = ylabelspacing; // default
+
+                if (document.getElementById("advancedgrid").checked) {
+                    xlabelspacingAdv = parseFloat(document.getElementById("advancedXLabelSpacing").value) || xlabelspacing;
+                    ylabelspacingAdv = parseFloat(document.getElementById("advancedYLabelSpacing").value) || ylabelspacing;
+                }
+
+                for (let x = xmin; x <= xmax; x += xlabelspacingAdv) {
                     const [sx] = toSvgCoords(x, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
                     if (x != 0) {
                         let labelText = x;
@@ -506,7 +520,7 @@
                     drawLabel(svg, 0, sx - 8, y0 + 16, "end");
                 }
 
-                for (let y = ymin; y <= ymax; y += ylabelspacing) {
+                for (let y = ymin; y <= ymax; y += ylabelspacingAdv) {
                     const [, sy] = toSvgCoords(0, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
                     if (y != 0) {
                         let labelText = y;
