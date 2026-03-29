@@ -186,6 +186,12 @@
                 <option value="0">No</option>
             </select><br>
 
+            <label>Font:</label>
+            <select id="fontSelect">
+                <option value="Times New Roman" selected>Times New Roman</option>
+                <option value="Arial">Arial</option>
+            </select><br>
+
         </div>
 
     </div>
@@ -327,11 +333,13 @@
 
         function drawLabel(svg, text, x, y, anchor = "middle") {
 
+            const font = document.getElementById("fontSelect")?.value || "Times New Roman";
+
             const label = createSVG("text", {
                 x,
                 y,
                 "font-size": 14,
-                "font-family": "Times New Roman",
+                "font-family": font,
                 "text-anchor": anchor,
                 fill: "black"
             });
@@ -532,11 +540,25 @@
                     drawTick(svg, x0, sy, "horizontal");
                 }
 
-                const xlabel = createSVG("text", { x: widthPx + paddingPx + 15, y: y0 + 15, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
+                const font = document.getElementById("fontSelect")?.value || "Times New Roman";
+
+                const xlabel = createSVG("text", {
+                    x: widthPx + paddingPx + 15,
+                    y: y0 + 15,
+                    "font-size": 14,
+                    "font-family": font,
+                    "font-style": "italic"
+                });
                 xlabel.textContent = "x";
                 svg.appendChild(xlabel);
 
-                const ylabel = createSVG("text", { x: x0 - 15, y: 10, "font-size": 14, "font-family": "Times New Roman", "font-style": "italic" });
+                const ylabel = createSVG("text", {
+                    x: x0 - 15,
+                    y: 10,
+                    "font-size": 14,
+                    "font-family": font,
+                    "font-style": "italic"
+                });
                 ylabel.textContent = "y";
                 svg.appendChild(ylabel);
             }
