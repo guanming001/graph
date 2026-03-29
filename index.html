@@ -492,7 +492,11 @@
 
                 for (let x = xmin; x <= xmax; x += xlabelspacing) {
                     const [sx] = toSvgCoords(x, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                    if (x != 0) drawLabel(svg, x, sx, y0 + 16);
+                    if (x != 0) {
+                        let labelText = x;
+                        if (x < 0) labelText = "\u2212" + Math.abs(x);  // Replace "-" with longer minus
+                        drawLabel(svg, labelText, sx, y0 + 16);
+                    }
                     // Tick from x-axis down
                     drawTick(svg, sx, y0, "vertical");
                 }
@@ -504,7 +508,11 @@
 
                 for (let y = ymin; y <= ymax; y += ylabelspacing) {
                     const [, sy] = toSvgCoords(0, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                    if (y != 0) drawLabel(svg, y, x0 - 6, sy + 4, "end");
+                    if (y != 0) {
+                        let labelText = y;
+                        if (y < 0) labelText = "\u2212" + Math.abs(y);  // Replace "-" with longer minus
+                        drawLabel(svg, labelText, x0 - 6, sy + 4, "end");
+                    }
                     // Tick from y-axis left
                     drawTick(svg, x0, sy, "horizontal");
                 }
