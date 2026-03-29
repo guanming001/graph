@@ -491,9 +491,10 @@
                 drawLine(svg, x0, heightPx + paddingPx, x0, paddingPx - arrowOffset, 1, "black", "url(#arrow)");
 
                 for (let x = xmin; x <= xmax; x += xlabelspacing) {
-                    if (x === 0) continue;
                     const [sx] = toSvgCoords(x, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                    drawLabel(svg, x, sx, y0 + 16);
+                    if (x != 0) drawLabel(svg, x, sx, y0 + 16);
+                    // Tick from x-axis down
+                    drawTick(svg, sx, y0, "vertical");
                 }
 
                 if (xmin <= 0 && xmax >= 0) {
@@ -502,25 +503,8 @@
                 }
 
                 for (let y = ymin; y <= ymax; y += ylabelspacing) {
-                    if (y === 0) continue;
                     const [, sy] = toSvgCoords(0, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                    drawLabel(svg, y, x0 - 6, sy + 4, "end");
-                }
-
-                for (let x = xmin; x <= xmax; x += xlabelspacing) {
-                    if (x === 0) continue;
-                    const [sx] = toSvgCoords(x, 0, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                    drawLabel(svg, x, sx, y0 + 16);
-
-                    // Tick from x-axis down
-                    drawTick(svg, sx, y0, "vertical");
-                }
-
-                for (let y = ymin; y <= ymax; y += ylabelspacing) {
-                    if (y === 0) continue;
-                    const [, sy] = toSvgCoords(0, y, xmin, xmax, ymin, ymax, widthPx, heightPx);
-                    drawLabel(svg, y, x0 - 6, sy + 4, "end");
-
+                    if (y != 0) drawLabel(svg, y, x0 - 6, sy + 4, "end");
                     // Tick from y-axis left
                     drawTick(svg, x0, sy, "horizontal");
                 }
